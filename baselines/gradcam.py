@@ -24,7 +24,7 @@ from llava.conversation import conv_templates
 
 
 def load_checkpoint_model():
-    """Load optional diffusion-style VLM checkpoint; paths from LAVIDA_MODEL_PATH and LAVIDA_VISION_TOWER."""
+    """Load optional VLM checkpoint (e.g. LaViDa weights); paths from LAVIDA_MODEL_PATH and LAVIDA_VISION_TOWER."""
     pretrained = os.environ.get("LAVIDA_MODEL_PATH", "lavida-llada-v1.0-instruct")
     vision_tower = os.environ.get("LAVIDA_VISION_TOWER", "siglip-so400m-patch14-384")
     model_name = "llava_llada"

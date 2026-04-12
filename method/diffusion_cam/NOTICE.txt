@@ -1,8 +1,8 @@
 Third-party components in this directory:
 
-- Rank Gaussian filter and least-squares helpers (numpy_ops.py) are adapted from the
-  TAM (Token Activation Mapping) reference codebase, used under Apache License 2.0.
-- Dataset listing (dataset_prep.py) follows the same evaluation data layout conventions.
+- Rank Gaussian filter and least-squares helpers (numpy_ops.py) are adapted from publicly
+  available reference implementations, used under Apache License 2.0.
+- Dataset listing (dataset_prep.py) follows common evaluation data layout conventions.
 
-When publishing, cite the original TAM work as specified by its authors, in addition to
+When publishing, cite the original works as required by their licenses, in addition to
 your Diffusion-CAM contributions.

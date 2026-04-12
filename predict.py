@@ -211,8 +211,8 @@ def apply_diffusion_enhanced_rank_gaussian_filter(heatmap, step_ratio, activatio
     except Exception as e:
         return heatmap
 
-def apply_tam_enhancement(heatmap, image, info4cam, tokens, logits, processor, target_token_idx=0, img_scores_list=None, cam_logits=None, ablation_mode="all_methods", dacg_params=None):
-    """Apply TAM enhancement pipeline to a raw LaViDA CAM heatmap.
+def apply_cam_postprocess(heatmap, image, info4cam, tokens, logits, processor, target_token_idx=0, img_scores_list=None, cam_logits=None, ablation_mode="all_methods", dacg_params=None):
+    """Apply post-processing pipeline to a raw CAM heatmap.
 
     Modules applied based on ablation_mode:
     - "baseline": raw CAM, no enhancement
@@ -521,8 +521,8 @@ def save_cam_images(original_heatmap, enhanced_heatmap, image, image_name, outpu
     """Save CAM comparison images (original vs enhanced).
 
     Args:
-        original_heatmap: raw LaViDA CAM heatmap
-        enhanced_heatmap: TAM-enhanced heatmap
+        original_heatmap: raw CAM heatmap
+        enhanced_heatmap: post-processed heatmap
         image: 
         image_name: 
         output_dir: 
@@ -829,7 +829,7 @@ def compute_iou_with_fixed_threshold(heatmap, mask_path, threshold=0.4):
         return 0.0
 
 def compute_obj_func_iou(heatmap, mask_path, tokens=None, processor=None):
-    """Compute Obj-IoU and Func-IoU following TAM evaluation protocol.
+    """Compute Obj-IoU and Func-IoU using a segmentation-style evaluation setup.
 
     Args:
         heatmap: activation heatmap (numpy array)
@@ -926,7 +926,7 @@ def compute_obj_func_iou(heatmap, mask_path, tokens=None, processor=None):
         return {"obj_iou": 0.0, "func_iou": 0.0, "precision": 0.0, "recall": 0.0}
 
 def compute_comprehensive_score(obj_iou, precision, recall, heatmap, ground_truth):
-    """Compute comprehensive TAM score combining multiple metrics.
+    """Compute a composite score combining multiple metrics.
 
     Components:
     1. Obj-IoU: overlap between binarized heatmap and ground truth
@@ -965,16 +965,16 @@ def compute_comprehensive_score(obj_iou, precision, recall, heatmap, ground_trut
         detection_f1 = 0
 
     if obj_iou > 0 and contrast_score > 0 and concentration_ratio > 0:
-        tam_score_geometric = (obj_iou * contrast_score * concentration_ratio) ** (1/3)
+        composite_score_geometric = (obj_iou * contrast_score * concentration_ratio) ** (1/3)
     else:
-        tam_score_geometric = 0.0
+        composite_score_geometric = 0.0
 
     if obj_iou > 0 and contrast_score > 0 and concentration_ratio > 0:
-        tam_score_harmonic = 3 / (1/obj_iou + 1/contrast_score + 1/concentration_ratio)
+        composite_score_harmonic = 3 / (1/obj_iou + 1/contrast_score + 1/concentration_ratio)
     else:
-        tam_score_harmonic = 0.0
+        composite_score_harmonic = 0.0
 
-    tam_score = tam_score_harmonic
+    composite_score = composite_score_harmonic
 
     return {
         "obj_iou": obj_iou,
@@ -988,9 +988,9 @@ def compute_comprehensive_score(obj_iou, precision, recall, heatmap, ground_trut
         "precision": precision,
         "recall": recall,
 
-        "tam_score": tam_score,
-        "tam_score_geometric": tam_score_geometric,
-        "tam_score_harmonic": tam_score_harmonic
+        "composite_score": composite_score,
+        "composite_score_geometric": composite_score_geometric,
+        "composite_score_harmonic": composite_score_harmonic
     }
 
 def compute_iou(heatmap, mask_path):
@@ -1069,7 +1069,7 @@ def find_target_token(tokens, target_word):
     return target_indices if target_indices else None
 
 def process_single_image(image_path, prompt_text=None, mask_path=None, target_token=None, manual_indices=None, ablation_mode="all_methods"):
-    """Generate CAM for a single image using contrastive gradient and TAM enhancement.
+    """Generate CAM for a single image using contrastive gradient and post-processing.
 
     Args:
         image_path: path to input image
@@ -1424,7 +1424,7 @@ def process_single_image(image_path, prompt_text=None, mask_path=None, target_to
 
     tokens = cont[0].tolist()
 
-    enhanced_heatmap = apply_tam_enhancement(
+    enhanced_heatmap = apply_cam_postprocess(
         heatmap=heatmap_raw if ablation_mode != "baseline" else heatmap,
         image=np.array(image),
         info4cam=info4cam,
@@ -1496,40 +1496,41 @@ def process_single_image(image_path, prompt_text=None, mask_path=None, target_to
 
     summary_path = os.path.join(save_dir, f'{Path(image_path).stem}_summary.txt')
     with open(summary_path, 'w', encoding='utf-8') as f:
-        f.write(f"LaViDA Contrastive Gradient CAM \n")
+        f.write(f"Diffusion-CAM — run summary\n")
         f.write(f"=" * 50 + "\n")
-        f.write(f": {Path(image_path).name}\n")
-        f.write(f"CAM: Contrastive Gradient CAM\n")
+        f.write(f"Image: {Path(image_path).name}\n")
+        f.write(f"CAM: Contrastive gradient CAM (component)\n")
         f.write(f"Token (Target): '{sep_words[target_idx]}' ({target_idx})\n")
         f.write(f"Token (Distractor): '{sep_words[distractor_idx]}' ({distractor_idx})\n")
         f.write(f": G_final = ReLU(G_target - G_distractor)\n")
         f.write(f": {t1 - t0:.2f}\n")
         f.write(f": {text_outputs[0] if text_outputs else 'N/A'}\n")
-        f.write(f"\nDiffusion-CAM ():\n")
-        f.write(f"  LaViDA CAM:\n")
+        f.write(f"\nContrastive gradient CAM (baseline heatmap)\n")
+        f.write(f"  Metrics:\n")
         f.write(f"    Obj-IOU: {original_obj_iou:.4f}\n")
         f.write(f"    Precision: {original_precision:.4f}\n")
         f.write(f"    Recall: {original_recall:.4f}\n")
         f.write(f"    /: {original_scores['contrast_ratio']:.2f}x (fg={original_scores['fg_mean']:.3f}, bg={original_scores['bg_mean']:.3f})\n")
         f.write(f"    : {original_scores['concentration_ratio']:.2%}\n")
         f.write(f"    F1-Score: {original_scores['detection_f1']:.4f}\n")
-        f.write(f"    F3-Score (): {original_scores['tam_score_harmonic']:.4f}\n")
-        f.write(f"    F3-Score (): {original_scores['tam_score_geometric']:.4f}\n")
-        f.write(f"  Diffusion-CAM:\n")
+        f.write(f"    F3-Score (): {original_scores['composite_score_harmonic']:.4f}\n")
+        f.write(f"    F3-Score (): {original_scores['composite_score_geometric']:.4f}\n")
+        f.write(f"\nDiffusion-CAM (refined heatmap)\n")
+        f.write(f"  Metrics:\n")
         f.write(f"    Obj-IOU: {enhanced_obj_iou:.4f}\n")
         f.write(f"    Precision: {enhanced_precision:.4f}\n")
         f.write(f"    Recall: {enhanced_recall:.4f}\n")
         f.write(f"    /: {enhanced_scores['contrast_ratio']:.2f}x (fg={enhanced_scores['fg_mean']:.3f}, bg={enhanced_scores['bg_mean']:.3f})\n")
         f.write(f"    : {enhanced_scores['concentration_ratio']:.2%}\n")
         f.write(f"    F1-Score: {enhanced_scores['detection_f1']:.4f}\n")
-        f.write(f"    F3-Score (): {enhanced_scores['tam_score_harmonic']:.4f}\n")
-        f.write(f"    F3-Score (): {enhanced_scores['tam_score_geometric']:.4f}\n")
-        f.write(f"  :\n")
+        f.write(f"    F3-Score (): {enhanced_scores['composite_score_harmonic']:.4f}\n")
+        f.write(f"    F3-Score (): {enhanced_scores['composite_score_geometric']:.4f}\n")
+        f.write(f"  Change (refined vs baseline):\n")
         f.write(f"    Obj-IOU: {enhanced_obj_iou - original_obj_iou:+.4f} ({((enhanced_obj_iou - original_obj_iou) / original_obj_iou * 100) if original_obj_iou > 0 else 0:+.1f}%)\n")
         f.write(f"    : {enhanced_scores['contrast_ratio'] - original_scores['contrast_ratio']:+.2f}x ({((enhanced_scores['contrast_ratio'] - original_scores['contrast_ratio']) / original_scores['contrast_ratio'] * 100) if original_scores['contrast_ratio'] > 0 else 0:+.1f}%)\n")
         f.write(f"    : {enhanced_scores['concentration_ratio'] - original_scores['concentration_ratio']:+.2%}\n")
-        f.write(f"    F3-Score (): {enhanced_scores['tam_score_harmonic'] - original_scores['tam_score_harmonic']:+.4f} ({((enhanced_scores['tam_score_harmonic'] - original_scores['tam_score_harmonic']) / original_scores['tam_score_harmonic'] * 100) if original_scores['tam_score_harmonic'] > 0 else 0:+.1f}%)\n")
-        f.write(f"    F3-Score (): {enhanced_scores['tam_score_geometric'] - original_scores['tam_score_geometric']:+.4f} ({((enhanced_scores['tam_score_geometric'] - original_scores['tam_score_geometric']) / original_scores['tam_score_geometric'] * 100) if original_scores['tam_score_geometric'] > 0 else 0:+.1f}%)\n")
+        f.write(f"    F3-Score (): {enhanced_scores['composite_score_harmonic'] - original_scores['composite_score_harmonic']:+.4f} ({((enhanced_scores['composite_score_harmonic'] - original_scores['composite_score_harmonic']) / original_scores['composite_score_harmonic'] * 100) if original_scores['composite_score_harmonic'] > 0 else 0:+.1f}%)\n")
+        f.write(f"    F3-Score (): {enhanced_scores['composite_score_geometric'] - original_scores['composite_score_geometric']:+.4f} ({((enhanced_scores['composite_score_geometric'] - original_scores['composite_score_geometric']) / original_scores['composite_score_geometric'] * 100) if original_scores['composite_score_geometric'] > 0 else 0:+.1f}%)\n")
         f.write(f"\n:\n")
         f.write(f"  CAM: {image_name}_original_cam.jpg\n")
         f.write(f"  CAM: {image_name}_enhanced_cam.jpg\n")
@@ -1545,7 +1546,7 @@ def process_single_image(image_path, prompt_text=None, mask_path=None, target_to
         'original_heatmap': heatmap,
         'heatmap_raw': heatmap_raw,               # for DACG sensitivity re-runs
         'enhanced_heatmap': enhanced_heatmap,
-        '_tam_args': {                              # intermediate data for re-applying
+        '_postprocess_args': {                              # intermediate data for re-applying
             'image_array': np.array(image),
             'info4cam': info4cam,
             'tokens': tokens,
@@ -1565,7 +1566,7 @@ def process_single_image(image_path, prompt_text=None, mask_path=None, target_to
         'enhanced_scores': enhanced_scores,
         'obj_iou_improvement': enhanced_obj_iou - original_obj_iou,
         'func_iou_improvement': enhanced_func_iou - original_func_iou,
-        'comprehensive_improvement': enhanced_scores['tam_score'] - original_scores['tam_score'],
+        'comprehensive_improvement': enhanced_scores['composite_score'] - original_scores['composite_score'],
         'generation_time': t1 - t0,
         'save_dir': save_dir,
         'saved_files': {
@@ -1715,7 +1716,7 @@ def test_single_token_examples():
 
 
 def load_model_only():
-    """Load LaViDa and register FullSequenceHook on the target block."""
+    """Load VLM weights (e.g. official LaViDa checkpoint path lavida-llada-v1.0-instruct) and register FullSequenceHook on the target block."""
     global model, tokenizer, image_processor, conv
 
     pretrained = os.environ.get("LAVIDA_MODEL_PATH", "lavida-llada-v1.0-instruct")
@@ -1814,8 +1815,8 @@ def main():
                     enhanced_obj_iou = result['enhanced_obj_iou']
                     original_func_iou = result['original_func_iou']
                     enhanced_func_iou = result['enhanced_func_iou']
-                    original_comprehensive_score = result['original_scores']['tam_score']
-                    enhanced_comprehensive_score = result['enhanced_scores']['tam_score']
+                    original_comprehensive_score = result['original_scores']['composite_score']
+                    enhanced_comprehensive_score = result['enhanced_scores']['composite_score']
 
                     obj_iou_improvement = enhanced_obj_iou - original_obj_iou
                     func_iou_improvement = enhanced_func_iou - original_func_iou
@@ -1920,8 +1921,8 @@ def main():
                     enhanced_obj_iou = result['enhanced_obj_iou']
                     original_func_iou = result['original_func_iou']
                     enhanced_func_iou = result['enhanced_func_iou']
-                    original_comprehensive_score = result['original_scores']['tam_score']
-                    enhanced_comprehensive_score = result['enhanced_scores']['tam_score']
+                    original_comprehensive_score = result['original_scores']['composite_score']
+                    enhanced_comprehensive_score = result['enhanced_scores']['composite_score']
 
                     original_obj_ious.append(original_obj_iou)
                     enhanced_obj_ious.append(enhanced_obj_iou)

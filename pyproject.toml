@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "diffusion-cam"
 version = "0.1.0"
-description = "Diffusion-CAM: model-agnostic contrastive gradient CAM and TAM-style post-processing (optional VLM example)."
+description = "Diffusion-CAM: model-agnostic contrastive gradient CAM and optional post-processing (optional VLM example)."
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [

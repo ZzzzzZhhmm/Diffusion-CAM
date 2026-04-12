@@ -21,7 +21,7 @@ debug_checkpoints/
 ckpts*/
 
 # Dataset files (download separately)
-TAM-main/GranD-f/
+**/GranD-f/
 coco_download/
 coco_dataset/
 

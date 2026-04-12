@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Adapted from the TAM (Token Activation Mapping) reference implementation.
+# Adapted from publicly available reference implementations for activation map filtering.
 # See NOTICE.txt in this directory for attribution.
 
 import numpy as np

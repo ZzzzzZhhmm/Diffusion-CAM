@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Dataset listing helpers adapted from the TAM evaluation utilities.
+# Dataset listing helpers for common segmentation-style evaluation layouts.
 # See NOTICE.txt in this directory for attribution.
 
 import json
