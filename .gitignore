@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Byte-compiled / optimized
+*.py[cod]
+*$py.class
+
+# Model checkpoints & weights (too large for git)
+lavida-llada-v1.0-instruct/
+siglip-so400m-patch14-384/
+lavida-ckpts/
+checkpoints/
+project_checkpoints/
+debug_checkpoints/
+ckpts*/
+
+# Dataset files (download separately)
+TAM-main/GranD-f/
+coco_download/
+coco_dataset/
+
+# Experiment outputs (generated at runtime)
+*_results/
+result_image/
+output/
+outputdir/
+
+# Logs
+*.log
+*.log.*
+wandb/
+logs/
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# DevContainer
+!.devcontainer/*
+
+# Misc
+serve_images/
+notebooks/
+scratchpad/
+mlx_configs/
+data_processing/
+work_dirs/
+submissions/
+HIP/
+*_local.py
