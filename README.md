@@ -68,25 +68,36 @@ python predict.py \
 
 ## Installation
 
-We recommend **Python 3.10+**.
+We recommend **Python 3.10+** and a clean virtual environment.
 
-### Core install
+### 1. Create environment
 
-```Bash
-
-pip install -e .[train]
+```bash
+conda create -n diffusion-cam python=3.10 -y
+conda activate diffusion-cam
 ```
+### 2. Install PyTorch (CUDA 11.8 example)
+```bash
+pip install torch==2.7.1+cu118 torchvision==0.22.1+cu118 torchaudio==2.7.1+cu118 \
+  --index-url https://download.pytorch.org/whl/cu118
 
-### Evaluation utilities
+```
+If you use a different CUDA version or CPU-only setup, please install the matching PyTorch build first.
 
-```Bash
-
+### 3. Install project dependencies
+```bash
+pip install -r requirements.txt
+pip install -e .
+```
+### 4. Install evaluation utilities
+```bash
 cd eval
 pip install -e .
 cd ..
 ```
-
 ---
+
+
 
 ## Full Pipeline Setup
 
