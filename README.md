@@ -2,95 +2,166 @@
 
 Official implementation of **Diffusion-CAM**, a gradient-based visual explanation framework for **diffusion-based multimodal large language models (dMLLMs)**.
 
-> Diffusion-CAM adapts CAM-style visual attribution to the masked-denoising generation paradigm, enabling spatially grounded explanations for diffusion MLLMs.
+Diffusion-CAM adapts CAM-style visual attribution from autoregressive MLLMs to the **masked-denoising generation paradigm**, enabling spatially grounded explanations for diffusion MLLMs.
 
 ---
 
 ## Overview
 
-Recent explainability methods for multimodal large language models are largely built on **autoregressive** generation. In contrast, diffusion MLLMs generate responses through **iterative masked denoising** under fixed multimodal conditioning, which changes where and how reliable visual evidence should be extracted.
+Most existing explanation methods for multimodal large language models are designed for **autoregressive** generation.  
 
-Diffusion-CAM is designed for this setting. Instead of relying on autoregressive token dependencies, it identifies **structurally valid intermediate multimodal states** along the denoising trajectory and traces gradients from the final response back to image-grounded hidden features.
+Diffusion MLLMs instead generate responses through **iterative masked denoising** under fixed multimodal conditioning, which changes both where reliable visual evidence appears and how gradients should be traced.
 
-Our framework includes:
+**Diffusion-CAM** is designed for this setting. It extracts attribution from **structurally valid intermediate multimodal states** along the denoising trajectory, and traces gradients from the final response back to image-grounded hidden features.
 
-- **Diffusion-CAM base extractor** for dMLLMs
-- **AKD**: Adaptive Kernel Denoising
-- **DACG**: Distribution-Aware Confidence Gating
-- **CBA**: Contextual Background Attenuation
-- **SICD**: Single-Instance Causal Debiasing
+The full framework includes:
 
-These modules improve localization quality, reduce background noise, and suppress syntactic interference in activation maps.
+- **Diffusion-CAM base extractor**
 
----
+- **AKD** — Adaptive Kernel Denoising
 
-## Highlights
+- **DACG** — Distribution-Aware Confidence Gating
 
-- First CAM-style visual explanation framework tailored to **diffusion MLLMs**
-- Supports attribution under **masked denoising** rather than next-token prediction
-- Uses a **model-aware feasibility check** to select valid denoising steps for CAM extraction
-- Provides both **quantitative evaluation** and **qualitative visualization**
-- Includes sensitivity analysis, efficiency analysis, and controlled validation of the linguistic-economy hypothesis
+- **CBA** — Contextual Background Attenuation
+
+- **SICD** — Single-Instance Causal Debiasing
+
+These modules improve localization quality, suppress background noise, and reduce syntactic interference in activation maps.
 
 ---
 
-## Method Summary
+## Quick Start
 
-Given an image and a prompt, the model generates the response through iterative denoising. Diffusion-CAM:
+This repository currently supports **two usage modes**.
 
-1. Registers hooks on intermediate transformer blocks
-2. Identifies the valid image-token span from multimodal packing metadata
-3. Backpropagates gradients from selected answer-token scores
-4. Builds a base CAM from image-region hidden features and gradients
-5. Refines the heatmap with AKD, DACG, CBA, and SICD
+### 1. Method-only demo
 
-A key point is that the attribution step is **not hard-coded**.  
-We only extract CAM from denoising steps whose hidden states still contain the full image-token span.
+Runs the post-processing / refinement part only.  
+
+**No model checkpoint is required.**
+
+```Bash
+
+python examples/toy_example.py
+```
+
+### 2. Full Diffusion-CAM pipeline
+
+Runs generation, hidden-state hooking, gradient backpropagation, base Diffusion-CAM extraction, and optional refinement modules.
+
+```Bash
+
+python predict.py \
+  --selected_images path/to/ids.txt \
+  --ablation_mode all_methods
+```
+
+**Notes:**
+
+- `--selected_images` requires `COCO_DATASET_PATH`
+
+- The full pipeline requires a compatible LaViDa / LLaDA-style backend
+
+- Outputs are written according to the current script / experiment configuration
+
+---
+
+## Installation
+
+We recommend **Python 3.10+**.
+
+### Core install
+
+```Bash
+
+pip install -e .[train]
+```
+
+### Evaluation utilities
+
+```Bash
+
+cd eval
+pip install -e .
+cd ..
+```
+
+---
+
+## Full Pipeline Setup
+
+The current full pipeline is tested with a LaViDa / LLaDA-style backend.
+
+Before running `predict.py`, set:
+
+```Bash
+
+export LAVIDA_MODEL_PATH=/path/to/your/model
+export LAVIDA_VISION_TOWER=/path/to/your/vision_tower
+```
+
+For COCO-style evaluation, also set:
+
+```Bash
+
+export COCO_DATASET_PATH=/path/to/coco
+```
 
 ---
 
 ## Repository Structure
-| Path | Role                                                                                                       |
-|------|------------------------------------------------------------------------------------------------------------|
-| `method/diffusion_cam/` | Core                                                                                                       |
-| `examples/toy_example.py` | Minimal script: post-processing only, no VLM                                                               |
-| `predict.py` | Full pipeline: generation, forward, contrastive Grad-CAM, heatmap refinement |
-| `third_party/llava/` | Vendored LLaVA-NeXT–style code for one reproducible checkpoint path; replaceable                           |
-| `baselines/gradcam.py` | Optional GradCAM baseline                                                                                  |
-| `eval/` |                                                              |
-| `scripts/` | Training / DeepSpeed configs                                                                               |
 
-## Optional checkpoint (full pipeline)
-Download weights from a compatible Hugging Face collection (e.g. LaViDa / LLaVA-NeXT family) and set:
+```Bash
 
-- `LAVIDA_MODEL_PATH` — e.g. `lavida-llada-v1.0-instruct` (use the real folder or HF id for that model)
-- `LAVIDA_VISION_TOWER` — e.g. `siglip-so400m-patch14-384`
-
-Alternatively, clone [LLaVA-NeXT](https://github.com/LLaVA-VL/LLaVA-NeXT) or the LaViDa release you rely on and install or submodule it; keep `import llava` working, or adapt `predict.py` to your model API.
-
-## Install
-
-```bash
-pip install -e .[train]
-cd eval && pip install -e . && cd ..
+.
+├── baselines/              # Baseline methods such as Grad-CAM
+├── eval/                   # Evaluation package / metric utilities
+├── examples/               # Minimal runnable examples
+├── method/diffusion_cam/   # Core Diffusion-CAM implementation
+├── scripts/                # Launch scripts / experiment configs
+├── vendor/            # External backend code (currently llava-style path)
+├── predict.py              # Full pipeline entry
+├── pyproject.toml          # Package / dependency configuration
+├── LICENSE
+└── README.md
 ```
 
-## Run
+---
 
-Method-only (no GPU model):
+## Key components
 
-```bash
-python examples/toy_example.py
-```
+- `examples/toy_example.py`Minimal demo for the post-processing modules only.
 
-Full pipeline (needs `third_party/llava` + checkpoints):
+- `predict.py`Main entry for the full pipeline:
 
-```bash
-python predict.py --selected_images path/to/ids.txt --ablation_mode all_methods
-```
+    1. Multimodal generation
 
-`--selected_images` requires `COCO_DATASET_PATH` to resolve images and masks.
+    2. Hidden-state hook registration
+
+    3. Gradient backpropagation
+
+    4. Image-span feature slicing
+
+    5. Base Diffusion-CAM construction
+
+    6. Optional refinement with AKD / DACG / CBA / SICD
+
+- `method/diffusion_cam/`Core implementation of Diffusion-CAM and its refinement modules.
+
+- `eval/`Evaluation-related code for quantitative analysis.
+
+- `vendor/llava/`Vendored backend code used by the current full pipeline.
+
+---
+
+## Diffusion-Specific Note
+
+A key difference from autoregressive CAM extraction is that the attribution step is **not hard-coded**.
+
+Diffusion-CAM only extracts attribution from denoising steps whose hidden states still preserve the full image-token span required for spatial grounding. This model-aware feasibility check is central to making CAM work under masked denoising.
+
+---
 
 ## License
 
-See `LICENSE`. Third-party snippets in `method/diffusion_cam/` are documented in `method/diffusion_cam/NOTICE.txt`. Vendored code under `third_party/` remains subject to its upstream licenses.
+This repository is released under the license specified in `LICENSE`.

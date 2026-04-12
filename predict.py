@@ -34,13 +34,13 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 _REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
-_THIRD_PARTY = os.path.join(_REPO_ROOT, "third_party")
+_THIRD_PARTY = os.path.join(_REPO_ROOT, "vendor")
 _METHOD = os.path.join(_REPO_ROOT, "method")
 for _p in (_METHOD, _THIRD_PARTY, _REPO_ROOT):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-# Optional VLM stack (vendored under third_party/llava); not required for method/diffusion_cam alone.
+# Optional VLM stack (vendored under vendor/llava); not required for method/diffusion_cam alone.
 from llava.model.builder import load_pretrained_model
 from llava.mm_utils import get_model_name_from_path, process_images, tokenizer_image_token
 from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX

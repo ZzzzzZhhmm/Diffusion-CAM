@@ -11,7 +11,7 @@ import time
 import copy
 
 _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_THIRD = os.path.join(_REPO, "third_party")
+_THIRD = os.path.join(_REPO, "vendor")
 _METHOD = os.path.join(_REPO, "method")
 for _p in (_METHOD, _THIRD, _REPO):
     if _p not in sys.path:
